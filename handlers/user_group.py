@@ -6,6 +6,7 @@ from aiogram.types import Message, ChatPermissions
 from aiogram.filters import Command
 from datetime import datetime, timedelta
 from database.orm_query import add_user, update_warns, get_warns
+from utils.logging_utils import send_log
 
 from aiohttp.web_routedef import delete
 
@@ -97,7 +98,20 @@ async def warn_cmd(message: Message, bot: Bot):
                 await update_warns(warn, user_id)
                 await message.answer(f"Пользователь {message.reply_to_message.from_user.mention_html()} "
                                      f"получил {warn} предупреждение", parse_mode="HTML")
+                await send_log(bot,f"Админ {message.from_user.mention_html()} выдал варн {message.reply_to_message.from_user.mention_html()}")
 
+@user_group_router.message(Command("unwarn"))
+async def unwarn_cmd(message: Message, bot: Bot):
+    if message.reply_to_message:
+        if await is_admin(message, bot):
+            cur_warn = await get_warns(message.reply_to_message.from_user.id)
+            if cur_warn == 0:
+                return
+            warn = cur_warn - 1
+            await update_warns(warn, message.reply_to_message.from_user.id)
+            await message.answer(f"C пользователя {message.reply_to_message.from_user.mention_html()} "
+                                     f"снято предупреждение, на данный момент у него {warn} предупреждений!", parse_mode="HTML")
+            await send_log(bot,f"Админ {message.from_user.mention_html()} снял варн с {message.reply_to_message.from_user.mention_html()}")
 
 
 @user_group_router.message(F.text)
