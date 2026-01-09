@@ -3,6 +3,7 @@ import os
 import logging
 from aiogram import Bot, Dispatcher
 from dotenv import load_dotenv
+from database.models import init_db
 
 load_dotenv()
 
@@ -20,6 +21,7 @@ dp.include_router(user_group_router)
 async def main():
     print("Бот запущен!")
     await bot.delete_webhook(drop_pending_updates=True)
+    await init_db()                          # создаем бд
     await dp.start_polling(bot)
 
 if __name__ == "__main__":
