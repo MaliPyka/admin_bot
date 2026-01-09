@@ -1,5 +1,6 @@
 import asyncio
 import string
+import time
 
 from aiogram import Router, F, Bot
 from aiogram.types import Message, ChatPermissions
@@ -8,7 +9,6 @@ from datetime import datetime, timedelta
 from database.orm_query import add_user, update_warns, get_warns
 from utils.logging_utils import send_log
 
-from aiohttp.web_routedef import delete
 
 user_group_router = Router()
 
@@ -82,9 +82,8 @@ async def warn_cmd(message: Message, bot: Bot):
         if await is_admin(message, bot):
             user_id = int(message.reply_to_message.from_user.id)
             cur_warn = await get_warns(user_id)
-            print(cur_warn)
             warn = cur_warn + 1
-            print(warn)
+            cur_time = int(time.time())
             if warn >= 3:
                 try:
                     await message.chat.ban(user_id=user_id)
@@ -95,7 +94,7 @@ async def warn_cmd(message: Message, bot: Bot):
                     await message.answer(f"Пользователя {message.reply_to_message.from_user.mention_html()} "
                                  f"нельзя забанить", parse_mode="HTML")
             else:
-                await update_warns(warn, user_id)
+                await update_warns(warn,cur_time, user_id)
                 await message.answer(f"Пользователь {message.reply_to_message.from_user.mention_html()} "
                                      f"получил {warn} предупреждение", parse_mode="HTML")
                 await send_log(bot,f"Админ {message.from_user.mention_html()} выдал варн {message.reply_to_message.from_user.mention_html()}")
@@ -107,11 +106,14 @@ async def unwarn_cmd(message: Message, bot: Bot):
             cur_warn = await get_warns(message.reply_to_message.from_user.id)
             if cur_warn == 0:
                 return
+            cur_time = int(time.time())
             warn = cur_warn - 1
-            await update_warns(warn, message.reply_to_message.from_user.id)
+            await update_warns(warn,cur_time, message.reply_to_message.from_user.id)
             await message.answer(f"C пользователя {message.reply_to_message.from_user.mention_html()} "
                                      f"снято предупреждение, на данный момент у него {warn} предупреждений!", parse_mode="HTML")
             await send_log(bot,f"Админ {message.from_user.mention_html()} снял варн с {message.reply_to_message.from_user.mention_html()}")
+
+
 
 
 @user_group_router.message(F.text)

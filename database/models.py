@@ -18,7 +18,8 @@ async def init_db():
         await db.execute("""
         CREATE TABLE IF NOT EXISTS users_warns (
         user_id INTEGER PRIMARY KEY,
-        warns INTEGER DEFAULT 0
+        warns INTEGER DEFAULT 0,
+        last_warn_time INTEGER DEFAULT 0
         )
         """)
         await db.commit()
