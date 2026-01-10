@@ -6,6 +6,7 @@ from dotenv import load_dotenv
 from database.models import init_db
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from database.orm_query import check_and_reset_warns
+from middlewares.admin import AdminMiddleware
 
 load_dotenv()
 
@@ -27,6 +28,8 @@ dp = Dispatcher()
 
 dp.include_router(admin_router)
 dp.include_router(user_group_router)
+
+user_group_router.message.middleware(AdminMiddleware())
 
 async def main():
     print("Бот запущен!")
