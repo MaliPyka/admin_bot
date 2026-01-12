@@ -1,4 +1,3 @@
-import aiosqlite
 from database.models import get_db
 import time
 

@@ -12,16 +12,7 @@ from utils.logging_utils import send_log
 
 user_group_router = Router()
 
-def load_restricted_words():
-    try:
-        with open('restricted_words.txt', 'r', encoding='utf-8') as f:
-            # Читаем, убираем лишние пробелы и пустые строки
-            return {line.strip().lower() for line in f if line.strip()}
-    except FileNotFoundError:
-        print("Файл restricted_words.txt не найден! Создаю пустой список.")
-        return set()
 
-RESTRICTED_WORDS = load_restricted_words()
 
 async def is_admin(message: Message, bot: Bot) -> bool:
     member = await bot.get_chat_member(message.chat.id, message.from_user.id)
@@ -64,6 +55,7 @@ async def mute_cmd(message: Message, bot: Bot):
                 await message.answer(f"Пользователя {message.reply_to_message.from_user.mention_html()} "
                                      f"нельзя замутить", parse_mode="HTML")
 
+
 @user_group_router.message(Command("unmute"))
 async def unmute_cmd(message: Message, bot: Bot):
     unmute = ChatPermissions(can_send_messages=True)
@@ -77,27 +69,29 @@ async def unmute_cmd(message: Message, bot: Bot):
 
 
 @user_group_router.message(Command("warn"))
-async def warn_cmd(message: Message, bot: Bot):
+async def warn_cmd(message: Message, is_admin_check: bool, bot: Bot):
     if message.reply_to_message:
-        if await is_admin(message, bot):
-            user_id = int(message.reply_to_message.from_user.id)
-            cur_warn = await get_warns(user_id)
-            warn = cur_warn + 1
-            cur_time = int(time.time())
-            if warn >= 3:
-                try:
-                    await message.chat.ban(user_id=user_id)
-                    await message.answer(f"Пользователь {message.reply_to_message.from_user.mention_html()} "
-                                 f"забанен за многократные нарушения правил чата", parse_mode="HTML")
-                    await update_warns(0, user_id)
-                except Exception as e:
-                    await message.answer(f"Пользователя {message.reply_to_message.from_user.mention_html()} "
-                                 f"нельзя забанить", parse_mode="HTML")
-            else:
-                await update_warns(warn,cur_time, user_id)
+        if not is_admin_check:
+            return
+        user_id = int(message.reply_to_message.from_user.id)
+        cur_warn = await get_warns(user_id)
+        warn = cur_warn + 1
+        cur_time = int(time.time())
+        if warn >= 3:
+            try:
+                await message.chat.ban(user_id=user_id)
                 await message.answer(f"Пользователь {message.reply_to_message.from_user.mention_html()} "
+                                 f"забанен за многократные нарушения правил чата", parse_mode="HTML")
+                await update_warns(0, user_id)
+            except Exception as e:
+                await message.answer(f"Пользователя {message.reply_to_message.from_user.mention_html()} "
+                                 f"нельзя забанить", parse_mode="HTML")
+        else:
+            await update_warns(warn,cur_time, user_id)
+            await message.answer(f"Пользователь {message.reply_to_message.from_user.mention_html()} "
                                      f"получил {warn} предупреждение", parse_mode="HTML")
-                await send_log(bot,f"Админ {message.from_user.mention_html()} выдал варн {message.reply_to_message.from_user.mention_html()}")
+            await send_log(bot,f"Админ {message.from_user.mention_html()} выдал варн {message.reply_to_message.from_user.mention_html()}")
+
 
 @user_group_router.message(Command("unwarn"))
 async def unwarn_cmd(message: Message, bot: Bot):
@@ -115,26 +109,9 @@ async def unwarn_cmd(message: Message, bot: Bot):
 
 
 
-
-@user_group_router.message(F.text)
-@user_group_router.edited_message(F.text)
-async def clear_text(message: Message, bot: Bot):
-    member = await bot.get_chat_member(message.chat.id, message.from_user.id)
-    await add_user(message.from_user.id)
-
-    if member.status in ["creator", "administrator"]:
-        return
-    text_clean = message.text.lower().translate(str.maketrans('', '', string.punctuation))
-    words = text_clean.split()
-
-    if any(word in RESTRICTED_WORDS for word in words):
-        await message.delete()
-        warning = await message.answer(
-         f"{message.from_user.mention_html()}, мат запрещен!",
-            parse_mode="HTML"
-        )
-        await asyncio.sleep(5)
-        await warning.delete()
+@user_group_router.message()
+async def shadow_copy(message: Message):
+    pass
 
 
 

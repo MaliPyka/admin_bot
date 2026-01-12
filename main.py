@@ -6,7 +6,11 @@ from dotenv import load_dotenv
 from database.models import init_db
 from apscheduler.schedulers.asyncio import AsyncIOScheduler
 from database.orm_query import check_and_reset_warns
+
 from middlewares.admin import AdminMiddleware
+from middlewares.shadowban import ShadowBan
+from middlewares.filter import Filter
+from middlewares.antispam import AntiSpam
 
 load_dotenv()
 
@@ -18,7 +22,7 @@ scheduler = AsyncIOScheduler()
 async def on_startup(bot: Bot):
     await init_db()
 
-    scheduler.add_job(check_and_reset_warns, "interval", hours = 1)
+    scheduler.add_job(check_and_reset_warns, "interval", seconds=300)
     scheduler.start()
 
 
@@ -29,7 +33,10 @@ dp = Dispatcher()
 dp.include_router(admin_router)
 dp.include_router(user_group_router)
 
+user_group_router.message.middleware(Filter())
+user_group_router.message.middleware(ShadowBan())
 user_group_router.message.middleware(AdminMiddleware())
+user_group_router.message.middleware(AntiSpam())
 
 async def main():
     print("Бот запущен!")
