@@ -33,10 +33,11 @@ dp = Dispatcher()
 dp.include_router(admin_router)
 dp.include_router(user_group_router)
 
+user_group_router.message.middleware(AntiSpam())
 user_group_router.message.middleware(Filter())
 user_group_router.message.middleware(ShadowBan())
 user_group_router.message.middleware(AdminMiddleware())
-user_group_router.message.middleware(AntiSpam())
+
 
 async def main():
     print("Бот запущен!")

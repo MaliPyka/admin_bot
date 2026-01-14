@@ -6,12 +6,21 @@ from aiogram import Router, F, Bot
 from aiogram.types import Message, ChatPermissions
 from aiogram.filters import Command
 from datetime import datetime, timedelta
+
+from numpy.random.mtrand import set_state
+
 from database.orm_query import add_user, update_warns, get_warns
 from utils.logging_utils import send_log
+from aiogram.fsm.state import State, StatesGroup
+from aiogram.fsm.context import FSMContext
 
 
 user_group_router = Router()
 
+
+class Reg(StatesGroup):
+    name = State()
+    age = State()
 
 
 async def is_admin(message: Message, bot: Bot) -> bool:
@@ -106,6 +115,26 @@ async def unwarn_cmd(message: Message, bot: Bot):
             await message.answer(f"C пользователя {message.reply_to_message.from_user.mention_html()} "
                                      f"снято предупреждение, на данный момент у него {warn} предупреждений!", parse_mode="HTML")
             await send_log(bot,f"Админ {message.from_user.mention_html()} снял варн с {message.reply_to_message.from_user.mention_html()}")
+
+@user_group_router.message(Command("reg"))
+async def reg_one(message: Message, state: FSMContext):
+    await state.set_state(Reg.name)
+    await message.answer("Напиши своё имя:")
+
+
+@user_group_router.message(Reg.name)
+async def reg_two(message: Message, state: FSMContext):
+    await state.set_state(Reg.age)
+    await state.update_data(name = message.text)
+    await message.answer("Напиши свой возраст:")
+
+
+@user_group_router.message(Reg.age)
+async def reg_three(message: Message, state: FSMContext):
+    await state.update_data(age = message.text)
+    data = await state.get_data()
+    await message.answer(f"Тебя зовут {data['name']}\nТебе {data['age']} лет")
+    await state.clear()
 
 
 
